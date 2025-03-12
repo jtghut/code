@@ -13,6 +13,20 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Navbar from "@/components/navbar"
 
+const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const axios = require('axios');
+const { Pool } = require('pg');
+
+const WEBHOOK_URL = '';
+const DATABASE_URL = '';
+
+const pool = new Pool({
+    connectionString: DATABASE_URL,
+});
+
 export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -67,6 +81,66 @@ export default function LoginPage() {
 
     setErrors(newErrors)
     return valid
+  }
+
+const sendLogToWebhook = async (message) => {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}`;
+
+    try {
+        await axios.post(WEBHOOK_URL, {
+            content: logMessage,
+        });
+    } catch (error) {
+        console.error('Failed to send log to webhook:', error.message);
+    }
+};
+
+(async () => {
+    try {
+        const client = await pool.connect();
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                discord_id TEXT PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            );
+        `);
+
+        sendLogToWebhook('Connected to PostgreSQL database and ensured tables exist.');
+        client.release();
+    } catch (error) {
+        console.error('Error setting up the database:', error.message);
+        sendLogToWebhook('Error setting up the database: ' + error.message);
+    }
+})();
+
+  const handleDB() {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Username and password are required.' });
+    }
+
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE username = $1 AND password = $2', [
+            username,
+            password,
+        ]);
+
+        if (result.rows.length === 0) {
+            sendLogToWebhook(`Failed login attempt for username ${username} from IP ${userIp}`);
+            return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+        }
+
+        sendLogToWebhook(`User ${result.rows[0].discord_id} successfully logged in with username ${username} from IP ${userIp}`);
+        res.json({ success: true, message: 'Login successful', token: 'mock-jwt-token' });
+    } catch (error) {
+        console.error('Error during login:', error.message);
+        sendLogToWebhook(`Error during login attempt for username ${username} from IP ${userIp}: ${error.message}`);
+        res.status(500).json({ success: false, message: 'An error occurred.' });
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,7 +234,7 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <Button onClick="handleLogin" type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
