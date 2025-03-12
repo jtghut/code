@@ -100,13 +100,13 @@ const sendLogToWebhook = async (message) => {
     try {
         const client = await pool.connect();
 
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                discord_id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
-            );
-        `);
+       // await client.query(`
+      //      CREATE TABLE IF NOT EXISTS users (
+       //         email TEXT PRIMARY KEY,
+       //         username TEXT UNIQUE NOT NULL,
+       //         password TEXT NOT NULL
+      //      );
+    //    `);
 
         sendLogToWebhook('Connected to PostgreSQL database and ensured tables exist.');
         client.release();
@@ -116,30 +116,28 @@ const sendLogToWebhook = async (message) => {
     }
 })();
 
-  const handleDB() {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: 'Username and password are required.' });
+  const handleDBlogin = async (email, password) => {
+    if (!email || !password) {
+        alert("Email and Password is required")
     }
 
     try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1 AND password = $2', [
-            username,
+        const result = await pool.query('SELECT * FROM users WHERE email = $1 AND password = $2', [
+            email,
             password,
         ]);
 
         if (result.rows.length === 0) {
-            sendLogToWebhook(`Failed login attempt for username ${username} from IP ${userIp}`);
-            return res.status(401).json({ success: false, message: 'Invalid username or password.' });
+            sendLogToWebhook(`Failed login attempt for email ${email} from.`);
+            alert("Email and Password is invalid")
         }
 
         sendLogToWebhook(`User ${result.rows[0].discord_id} successfully logged in with username ${username} from IP ${userIp}`);
-        res.json({ success: true, message: 'Login successful', token: 'mock-jwt-token' });
+        alert("Login successfull.")
     } catch (error) {
         console.error('Error during login:', error.message);
         sendLogToWebhook(`Error during login attempt for username ${username} from IP ${userIp}: ${error.message}`);
-        res.status(500).json({ success: false, message: 'An error occurred.' });
+        alert("An error occured.")
     }
   }
 
