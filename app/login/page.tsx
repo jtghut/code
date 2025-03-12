@@ -160,7 +160,7 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
+              <Button onClick="handleLogin" type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
